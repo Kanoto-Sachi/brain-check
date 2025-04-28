@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>気持ち・やる気・ストレスの秘密を知る脳内診断</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      background: linear-gradient(135deg, #e0f7e9 0%, #a8e6cf 100%);
+      min-height: 100vh;
+      font-family: 'Helvetica Neue', sans-serif;
+    }
+    .step-section, #resultSection { display: none; }
+    .active, #resultSection.active { display: block; }
+    .btn-choice {
+      border: 1px solid #ccc;
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.5rem;
+      transition: all 0.2s;
+      cursor: pointer;
+      background-color: white;
+    }
+    .btn-choice.selected {
+      background-color: #34d399;
+      color: white;
+      font-weight: bold;
+    }
+    .btn-nav {
+      background-color: #60a5fa;
+      color: white;
+      padding: 0.5rem 1.5rem;
+      border-radius: 0.5rem;
+      font-weight: bold;
+      transition: all 0.2s;
+    }
+    .btn-nav:hover {
+      background-color: #3b82f6;
+    }
+  </style>
+</head>
+<body class="flex flex-col items-center py-8">
+  <h1 class="text-3xl md:text-5xl font-bold mb-8 text-center">気持ち・やる気・ストレスの秘密を知る脳内診断</h1>
+
+  <!-- 質問フォーム -->
+  <div id="quizContainer" class="w-full max-w-3xl space-y-8">
+    <form id="quizForm" class="bg-white bg-opacity-90 p-6 rounded-lg shadow-lg space-y-8">
+      <!-- ステップ1 -->
+      <section id="step1" class="step-section active">
+        <h2 class="text-xl font-semibold mb-4">【セロトニン関連】</h2>
+        <div id="serotoninQuestions" class="space-y-6"></div>
+        <div class="flex justify-end">
+          <button type="button" onclick="nextStep()" class="btn-nav">次へ</button>
+        </div>
+      </section>
+
+      <!-- ステップ2 -->
+      <section id="step2" class="step-section">
+        <h2 class="text-xl font-semibold mb-4">【ドーパミン関連】</h2>
+        <div id="dopamineQuestions" class="space-y-6"></div>
+        <div class="flex justify-between">
+          <button type="button" onclick="prevStep()" class="btn-nav bg-gray-400 hover:bg-gray-500">戻る</button>
+          <button type="button" onclick="nextStep()" class="btn-nav">次へ</button>
+        </div>
+      </section>
+
+      <!-- ステップ3 -->
+      <section id="step3" class="step-section">
+        <h2 class="text-xl font-semibold mb-4">【ノルアドレナリン関連】</h2>
+        <div id="norepinephrineQuestions" class="space-y-6"></div>
+        <div class="flex justify-between">
+          <button type="button" onclick="prevStep()" class="btn-nav bg-gray-400 hover:bg-gray-500">戻る</button>
+          <button type="button" onclick="showResults()" class="btn-nav bg-green-400 hover:bg-green-500">診断する</button>
+        </div>
+      </section>
+    </form>
+  </div>
+
+  <!-- 結果セクション -->
+  <div id="resultSection" class="bg-white bg-opacity-90 p-8 rounded-lg shadow-lg w-full max-w-3xl mt-8 text-gray-800">
+    <h2 class="text-2xl font-bold mb-4 text-center">診断結果</h2>
+    <div id="scoreDisplay" class="mb-4 text-lg text-center"></div>
+    <div id="commentDisplay" class="mb-4 whitespace-pre-line"></div>
+    <!-- もっと改善ヒントを見るボタン -->
+    <div class="flex justify-center mb-4">
+      <button id="moreHintsBtn" type="button" class="btn-nav bg-yellow-400 hover:bg-yellow-500">もっと改善ヒントを見る</button>
+    </div>
+    <!-- 追加ヒント表示エリア -->
+    <div id="extraHints" class="mb-6"></div>
+    <canvas id="radarChart" class="mb-6"></canvas>
+    <div class="flex justify-center space-x-4">
+      <a id="shareX" href="#" target="_blank" class="btn-nav bg-blue-400 hover:bg-blue-600">結果をXで共有</a>
+    </div>
+  </div>
+
+<script>
+const serotonin_questions = [
+  "楽しいと感じる瞬間が増えてきた",
+  "リラックスできる時間を日常的に確保できている",
+  "自然に触れる機会を持っている",
+  "気持ちを落ち着かせることができる",
+  "安定した睡眠が取れている",
+  "感情の波が少ないと感じる",
+  "周囲への思いやりを自然に持てる",
+  "日中に憂うつ感を感じることが少ない"
+];
+
+const dopamine_questions = [
+  "新しいことへの好奇心がある",
+  "目標に向かってワクワクできる",
+  "好きな活動に集中できる",
+  "チャレンジを楽しめる",
+  "ご褒美を楽しみに頑張れる",
+  "成功体験を喜べる",
+  "物事に積極的に取り組める",
+  "集中力を保ちやすい"
+];
+
+const norepinephrine_questions = [
+  "朝すっきり目覚めることができる",
+  "運動後に気分がよくなる",
+  "忙しくても落ち着いて行動できる",
+  "予期しない出来事にも冷静に対処できる",
+  "ストレスを感じても早めに回復できる",
+  "適度な緊張感でパフォーマンスを上げられる",
+  "問題が起きても柔軟に対応できる",
+  "集中力が高まる瞬間を感じられる"
+];
+
+// セロトニン・ドーパミン・ノルアドレナリン別行動変容アプローチ
+const extraHints = [
+  // セロトニン
+  "→ 日光浴（15分以上）：セロトニン合成が促進される（Lambert et al., 2002）。",
+  "→ トリプトファンを含む食品摂取（バナナ、ナッツ）：前駆物質の供給でセロトニン合成向上（Fernstrom & Wurtman, 1971）。",
+  "→ 定期的な有酸素運動：セロトニン受容体の感受性を高める（Chaouloff, 1989）。",
+  "→ 瞑想／マインドフルネス：セロトニン放出を促進しストレス緩和（Young & Leyton, 2002）。",
+  "→ メラトニンリズムを整える睡眠習慣：セロトニン代謝と連携（Bedrosian & Nelson, 2013）。",
+  // ドーパミン
+  "→ SMART目標設定：小さな達成を計画しドーパミン報酬回路を活性化（Locke & Latham, 2002）。",
+  "→ 実行意図（if-thenプラン）：意思決定時のドーパミン放出を強化（Gollwitzer & Sheeran, 2006）。",
+  "→ 新規刺激を伴う趣味：未知の成功体験でドーパミン分泌促進（Grace, 2016）。",
+  "→ 達成リスト作成：完了項目ごとにドーパミン報酬を獲得（Schultz, 1998）。",
+  "→ セルフリワード設定：タスク後に小さな報酬で強化学習（Skinner, 1938）。",
+  // ノルアドレナリン
+  "→ HIIT（高強度インターバルトレーニング）：ノルアドレナリン分泌増加（Strüder et al., 1998）。",
+  "→ 適度なカフェイン（コーヒー、緑茶）：ノルアドレナリン神経活性化（Smith, 2002）。",
+  "→ 朝の冷水シャワー：交感神経を刺激しノルアドレナリン分泌促進（Shevchuk, 2007）。",
+  "→ 呼吸法（速呼吸法）：交感神経活性とノルアドレナリン放出調整（Jerath et al., 2006）。",
+  "→ 目標へのコミットメントデバイス：緊張環境でモチベーション維持（Bryan et al., 2010）。"
+];
+
+let currentStep = 1;
+const totalSteps = 3;
+
+function showStep(n) {
+  for (let i = 1; i <= totalSteps; i++) {
+    document.getElementById(`step${i}`).classList.toggle('active', i === n);
+  }
+}
+
+function nextStep() {
+  if (currentStep < totalSteps) {
+    currentStep++;
+    showStep(currentStep);
+  }
+}
+
+function prevStep() {
+  if (currentStep > 1) {
+    currentStep--;
+    showStep(currentStep);
+  }
+}
+
+function createQuestionElements(questions, containerId, prefix) {
+  const container = document.getElementById(containerId);
+  questions.forEach((q, idx) => {
+    const div = document.createElement('div');
+    div.classList.add('space-y-2');
+    div.innerHTML = 
+      `<p class="text-lg font-medium">${idx + 1}. ${q}</p>
+      <div class="flex flex-wrap gap-2">
+        ${Array.from({length: 11}, (_, i) => 
+          `<button type="button" class="btn-choice" onclick="selectOption('${prefix}_${idx}', ${i - 5}, this)">${i - 5}</button>`
+        ).join('')}
+      </div>`;
+    container.appendChild(div);
+  });
+}
+
+function selectOption(name, value, button) {
+  const groupButtons = document.querySelectorAll(`button[onclick*="${name}"]`);
+  groupButtons.forEach(btn => btn.classList.remove('selected'));
+  button.classList.add('selected');
+  button.dataset.value = value;
+}
+
+function showResults() {
+  const requiredTotal = serotonin_questions.length + dopamine_questions.length + norepinephrine_questions.length;
+  const selected = document.querySelectorAll('.btn-choice.selected').length;
+  if (selected < requiredTotal) {
+    alert('すべての設問に答えてください！');
+    return;
+  }
+
+  let serotonin = 0, dopamine = 0, norepinephrine = 0;
+  document.querySelectorAll('.btn-choice.selected').forEach(btn => {
+    const onclickAttr = btn.getAttribute('onclick');
+    const prefix = onclickAttr.match(/'(.*?)'/)[1].split('_')[0];
+    const value = parseInt(btn.textContent, 10);
+    if (prefix === 'serotonin') serotonin += value;
+    else if (prefix === 'dopamine') dopamine += value;
+    else if (prefix === 'norepinephrine') norepinephrine += value;
+  });
+
+  document.getElementById('quizContainer').style.display = 'none';
+  document.getElementById('resultSection').classList.add('active');
+
+  document.getElementById('scoreDisplay').innerText =
+    `セロトニン: ${serotonin}　ドーパミン: ${dopamine}　ノルアドレナリン: ${norepinephrine}`;
+
+  const comments = [];
+  if (serotonin < 0) comments.push("● セロトニンが不足傾向：リラックス習慣を意識して取り入れましょう。\n→ 短い瞑想や自然散歩がおすすめ。");
+  else if (serotonin > 20) comments.push("● セロトニンが非常に活発：心身の安定性が高い状態です！\n→ ストレスを感じたときも自分を信じて行動を。");
+  else comments.push("● セロトニンはバランス良好です。\n→ 日常のリズムを大切に、無理しすぎずキープしましょう。");
+  if (dopamine < 0) comments.push("● ドーパミンが不足傾向：意欲や楽しみを見つける工夫が必要です。\n→ 小さな成功体験を意識的に積み重ねましょう！");
+  else if (dopamine > 20) comments.push("● ドーパミンが非常に活発：チャレンジ精神が高い状態です！\n→ 無理な目標設定には注意しながら活かしてください。");
+  else comments.push("● ドーパミンはバランス良好です。\n→ 好奇心を大切に、新しい世界に少しずつ挑戦しましょう。");
+  if (norepinephrine < 0) comments.push("● ノルアドレナリンが不足傾向：覚醒リズムを整える工夫が必要です。\n→ 朝の散歩、軽い運動を試してみましょう！");
+  else if (norepinephrine > 20) comments.push("● ノルアドレナリンが非常に活発：集中力とエネルギーが高い状態です！\n→ 適度に休憩を取り、オーバーワークを防ぎましょう。");
+  else comments.push("● ノルアドレナリンはバランス良好です。\n→ 緊張とリラックスのバランスを意識して過ごしましょう。");
+
+  document.getElementById('commentDisplay').innerText = comments.join("\n\n");
+
+  // ヒントをランダム表示
+  const hintsDiv = document.getElementById('extraHints');
+  const btn = document.getElementById('moreHintsBtn');
+  function showRandomHint() {
+    const rand = extraHints[Math.floor(Math.random() * extraHints.length)];
+    hintsDiv.innerHTML = `<p>${rand}</p>`;
+  }
+  btn.addEventListener('click', showRandomHint);
+  showRandomHint();
+
+  // レーダーチャート
+  new Chart(document.getElementById('radarChart').getContext('2d'), {
+    type: 'radar',
+    data: {
+      labels: ['セロトニン','ドーパミン','ノルアドレナリン'],
+      datasets: [{ label: '脳内物質バランス', data: [serotonin, dopamine, norepinephrine], backgroundColor: 'rgba(34,197,94,0.2)', borderColor: 'rgba(34,197,94,1)', pointBackgroundColor: 'rgba(34,197,94,1)' }]
+    },
+    options: { scale: { ticks: { beginAtZero: true, max: 30 } } }
+  });
+
+  // 共有リンク
+  const shareText = encodeURIComponent(`あなたの脳内診断結果！\nセロトニン: ${serotonin}\nドーパミン: ${dopamine}\nノルアドレナリン: ${norepinephrine}\n#脳内物質診断`);
+  document.getElementById('shareX').href = `https://twitter.com/intent/tweet?text=${shareText}`;
+}
+
+window.onload = () => {
+  createQuestionElements(serotonin_questions, 'serotoninQuestions', 'serotonin');
+  createQuestionElements(dopamine_questions, 'dopamineQuestions', 'dopamine');
+  createQuestionElements(norepinephrine_questions, 'norepinephrineQuestions', 'norepinephrine');
+  showStep(currentStep);
+};
+</script>
+
+</body>
+</html>
